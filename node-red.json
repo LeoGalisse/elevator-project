@@ -303,7 +303,7 @@
       "nodata": "No Data",
       "dot": false,
       "ymin": "0",
-      "ymax": "100",
+      "ymax": "36",
       "removeOlder": 1,
       "removeOlderPoints": "",
       "removeOlderUnit": "60",
