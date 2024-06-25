@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 # Define fuzzy variables
 error = ctrl.Antecedent(np.arange(0, 25.01, 0.01), 'error')
-delta_error = ctrl.Antecedent(np.arange(-50, 50.1, 0.1), 'delta_error')
+delta_error = ctrl.Antecedent(np.arange(-25, 25.1, 0.1), 'delta_error')
 p_motor = ctrl.Consequent(np.arange(0, 90.5, 0.5), 'p_motor')
 
 # Define membership functions for error
@@ -66,7 +66,6 @@ def update_position(current_position, desired_position, e, de):
     if (e == 0 and de == 0):
         return current_position
     
-    print(f'Current position: {current_position}, Error: {e}, Delta error: {de}')
     elevator.input['error'] = e
     elevator.input['delta_error'] = de
     elevator.compute()
@@ -74,9 +73,7 @@ def update_position(current_position, desired_position, e, de):
     new_position = current_position
     for time in np.arange(0.1, 3.1, 0.1):
         power = time * 0.315 / 3
-        print(f'Power: {power}')
         new_position = new_position * (1 if e >= 0 else -1) + power * 0.00951
-        print(f'New position: {new_position}')
         if time == round(time, 0):
             position = np.append(position, new_position)
         
@@ -92,7 +89,6 @@ def update_position(current_position, desired_position, e, de):
         
         elevator.compute()
         power = elevator.output['p_motor']
-        print(f'Power: {power}')
         new_position = abs(new_position * 0.996 * (1 if e >= 0 else -1) + power * 0.00951)
         
         position = np.append(position, new_position)
@@ -103,9 +99,6 @@ def update_position(current_position, desired_position, e, de):
     else:
         ymin, ymax = [min(position) * 0.75, current_position + 3]
         
-    print(f'ymin: {ymin}')
-    print(f'ymax: {ymax}')
-        
     return new_position
 
 # Flask endpoint to handle control requests
@@ -115,17 +108,42 @@ def control():
     current_position = data['body']['current_position']
     desired_position = data['body']['desired_position']
     previous_error = data['body']['previous_error']
+    is_staff = data['body']['is_staff']
+    last_digit = data['body']['last_digit']
     
-    print(f'Current position: {current_position}, Desired position: {desired_position}, Previous error: {previous_error}')
-    e = desired_position - current_position
-    de = e - previous_error
-    print(f'Error: {e}, Delta error: {de}')
-    new_position = update_position(current_position, desired_position, e, de)
-    previous_error = e
+    print(f'Current position: {current_position}, Desired position: {desired_position}, Is staff: {is_staff}, last digit: {last_digit}')
+    
+    if (is_staff == False and (desired_position == 0 or desired_position == 32)):
+        is_staff = True
+        new_position = current_position
+        print(f'Is staff: {is_staff}')
+    elif (is_staff == True and (desired_position != 0 and desired_position != 32)):
+        if (last_digit == 0 and desired_position == 8):
+            new_position = current_position
+        elif (last_digit == 32 and desired_position == 23):
+            new_position = current_position
+        elif (last_digit == 23 and desired_position == 4):
+            desired_position = 32
+            is_staff = False
+        elif (last_digit == 8 and desired_position == 20):
+            desired_position = 0
+            is_staff = False
+        else:
+            is_staff = False
+            
+    if (is_staff == False):      
+        e = desired_position - current_position
+        de = e - previous_error
+        new_position = update_position(current_position, desired_position, e, de)
+        previous_error = e
+        
+    print(f'Current position: {current_position}, Desired position: {desired_position}, Is staff: {is_staff}, last digit: {last_digit}')
     
     response = {
         'current_position': new_position,
-        'previous_error': previous_error
+        'previous_error': previous_error,
+        'is_staff': is_staff,
+        'last_digit': desired_position
     }
     return jsonify(response)
 
