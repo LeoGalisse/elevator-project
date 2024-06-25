@@ -12,7 +12,7 @@ p_motor = ctrl.Consequent(np.arange(0, 90.5, 0.5), 'p_motor')
 
 # Define membership functions for error
 error['zero'] = fuzz.trapmf(error.universe, [0, 0, 0.1, 0.2])
-error['d1'] = fuzz.trimf(error.universe, [0.15, 0.2, 9])
+error['d1'] = fuzz.trimf(error.universe, [0.10, 0.2, 9])
 error['d2'] = fuzz.trimf(error.universe, [0.2, 9, 15])
 error['d3'] = fuzz.trimf(error.universe, [9, 15, 21])
 error['d4'] = fuzz.trimf(error.universe, [15, 21, 25])
@@ -38,22 +38,22 @@ rule4 = ctrl.Rule(error['zero'] & delta_error['less_positive'], p_motor['initial
 rule5 = ctrl.Rule(error['zero'] & delta_error['much_positive'], p_motor['initial'])
 rule6 = ctrl.Rule(error['d1'] & delta_error['much_negative'], p_motor['low'])
 rule7 = ctrl.Rule(error['d1'] & delta_error['less_negative'], p_motor['low'])
-rule8 = ctrl.Rule(error['d1'] & delta_error['zero'], p_motor['low'])
+rule8 = ctrl.Rule(error['d1'] & delta_error['zero'], p_motor['initial'])
 rule9 = ctrl.Rule(error['d1'] & delta_error['less_positive'], p_motor['low'])
 rule10 = ctrl.Rule(error['d1'] & delta_error['much_positive'], p_motor['low'])
 rule11 = ctrl.Rule(error['d2'] & delta_error['much_negative'], p_motor['medium'])
 rule12 = ctrl.Rule(error['d2'] & delta_error['less_negative'], p_motor['medium'])
-rule13 = ctrl.Rule(error['d2'] & delta_error['zero'], p_motor['medium'])
+rule13 = ctrl.Rule(error['d2'] & delta_error['zero'], p_motor['initial'])
 rule14 = ctrl.Rule(error['d2'] & delta_error['less_positive'], p_motor['medium'])
 rule15 = ctrl.Rule(error['d2'] & delta_error['much_positive'], p_motor['medium'])
 rule16 = ctrl.Rule(error['d3'] & delta_error['much_negative'], p_motor['high'])
 rule17 = ctrl.Rule(error['d3'] & delta_error['less_negative'], p_motor['high'])
-rule18 = ctrl.Rule(error['d3'] & delta_error['zero'], p_motor['high'])
+rule18 = ctrl.Rule(error['d3'] & delta_error['zero'], p_motor['initial'])
 rule19 = ctrl.Rule(error['d3'] & delta_error['less_positive'], p_motor['high'])
 rule20 = ctrl.Rule(error['d3'] & delta_error['much_positive'], p_motor['high'])
 rule21 = ctrl.Rule(error['d4'] & delta_error['much_negative'], p_motor['high'])
 rule22 = ctrl.Rule(error['d4'] & delta_error['less_negative'], p_motor['high'])
-rule23 = ctrl.Rule(error['d4'] & delta_error['zero'], p_motor['high'])
+rule23 = ctrl.Rule(error['d4'] & delta_error['zero'], p_motor['initial'])
 rule24 = ctrl.Rule(error['d4'] & delta_error['less_positive'], p_motor['high'])
 rule25 = ctrl.Rule(error['d4'] & delta_error['much_positive'], p_motor['high'])
 
@@ -63,15 +63,19 @@ elevator = ctrl.ControlSystemSimulation(elevator_ctrl)
 
 # Function to update the elevator position
 def update_position(current_position, desired_position, e, de):
+    if (e == 0 and de == 0):
+        return current_position
+    
     print(f'Current position: {current_position}, Error: {e}, Delta error: {de}')
     elevator.input['error'] = e
     elevator.input['delta_error'] = de
     elevator.compute()
     position, _ = [[current_position], current_position]
+    new_position = current_position
     for time in np.arange(0.1, 3.1, 0.1):
         power = time * 0.315 / 3
         print(f'Power: {power}')
-        new_position = current_position * 0.996 * (1 if e >= 0 else -1) + power * 0.00951
+        new_position = new_position * (1 if e >= 0 else -1) + power * 0.00951
         print(f'New position: {new_position}')
         if time == round(time, 0):
             position = np.append(position, new_position)
@@ -115,6 +119,7 @@ def control():
     print(f'Current position: {current_position}, Desired position: {desired_position}, Previous error: {previous_error}')
     e = desired_position - current_position
     de = e - previous_error
+    print(f'Error: {e}, Delta error: {de}')
     new_position = update_position(current_position, desired_position, e, de)
     previous_error = e
     
