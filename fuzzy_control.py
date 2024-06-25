@@ -15,7 +15,7 @@ error['zero'] = fuzz.trapmf(error.universe, [0, 0, 0.1, 0.2])
 error['d1'] = fuzz.trimf(error.universe, [0.10, 0.2, 9])
 error['d2'] = fuzz.trimf(error.universe, [0.2, 9, 15])
 error['d3'] = fuzz.trimf(error.universe, [9, 15, 21])
-error['d4'] = fuzz.trimf(error.universe, [15, 21, 25])
+error['d4'] = fuzz.trapmf(error.universe, [15, 21, 25, 25])
 
 # Define membership functions for delta_error
 delta_error['much_negative'] = fuzz.trapmf(delta_error.universe, [-50, -50, -24, -12])
